@@ -1,0 +1,5 @@
+automation:
+  name: fraud_detection
+  flow: fraud_detection
+  trigger:
+    schedule: "0 * * * *"

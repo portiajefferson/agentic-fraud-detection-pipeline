@@ -1,0 +1,4 @@
+connection:
+  name: read_local_files
+  type: local_file
+  parameters: {}
