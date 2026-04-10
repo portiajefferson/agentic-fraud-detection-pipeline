@@ -2,4 +2,4 @@ component:
   read:
     connection: read_local_files
     local_file:
-      path: /transactions.csv
+      path: data/transactions.csv
