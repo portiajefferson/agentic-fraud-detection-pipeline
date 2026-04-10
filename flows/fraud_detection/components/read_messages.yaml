@@ -1,5 +1,6 @@
 component:
-  read:
-    connection: read_local_files
-    local_file:
-      path: data/transactions.csv
+  name: read_messages
+  type: read
+  connection: read_local_files
+  parameters:
+    path: data/messages.csv
