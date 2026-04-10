@@ -1,2 +1,7 @@
-workspace:
-  parameters: {}
+profile:
+  parameters:
+    gcp:
+      $<: $parameters.gcp
+      bigquery:
+        $<: $parameters.gcp.bigquery
+        dataset_prefix: OTTOS_EXPEDITIONS_WORKSPACE_YOUR_NAME
