@@ -1,5 +1,15 @@
 automation:
   name: fraud_detection
-  flow: fraud_detection
-  trigger:
-    schedule: "0 * * * *"
+  enabled: true
+  triggers:
+    sensors:
+      - type: timer
+        name: daily-fraud-detection
+        config:
+          schedule:
+            cron: 0 * * * *
+  actions:
+    - type: run_flow
+      name: run-fraud-detection
+      config:
+        flow: fraud_detection
