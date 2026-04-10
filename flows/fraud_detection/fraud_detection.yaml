@@ -1,6 +1,7 @@
 flow:
   name: fraud_detection
-  components:
-    - read_messages
-    - read_transactions
-    - fraud_risk_dataset
+  version: 0.1.0
+  description: >-
+    End-to-end fraud detection pipeline that joins uploaded transactions and
+    messages and computes risk scores.
+  data_plane: {}
