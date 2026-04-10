@@ -1,0 +1,6 @@
+flow:
+  name: fraud_detection
+  components:
+    - read_messages
+    - read_transactions
+    - fraud_risk_dataset
