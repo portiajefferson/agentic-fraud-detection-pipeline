@@ -1,2 +1,4 @@
-deployment:
-  parameters: {}
+profile:
+  parameters:
+    gcp:
+      $<: $parameters.gcp
