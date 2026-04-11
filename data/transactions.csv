@@ -1,1 +1,1 @@
-transaction_id,sender_account,receiver_account,amount,currency,timestamp
+user_id,transaction_id,amount,is_new_recipient

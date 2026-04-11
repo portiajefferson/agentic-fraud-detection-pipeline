@@ -1,1 +1,1 @@
-message_id,sender,receiver,content,timestamp
+user_id,message_id,message_text
