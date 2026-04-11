@@ -116,6 +116,7 @@ Each platform has a dedicated parameterized connection. Select the matching prof
 | 🟧 | `#connection:data_plane_databricks` | Databricks Unity Catalog |
 | 🟨 | `#connection:data_plane_duckdb` | DuckDB |
 | 🟩 | `#connection:data_plane_duckdb_postgres` | DuckDB with Postgres metadata |
+| 🟫 | `#connection:data_plane_fabric` | Microsoft Fabric Lakehouse |
 | 🟪 | `#connection:data_plane_motherduck` | MotherDuck cloud |
 | 🩵 | `#connection:data_plane_snowflake` | Snowflake |
 
@@ -425,6 +426,7 @@ Scoring is intentionally two-dimensional and independently computed so that each
 | `connections/data_plane_databricks.yaml` | Databricks data plane connection |
 | `connections/data_plane_duckdb.yaml` | DuckDB data plane connection |
 | `connections/data_plane_duckdb_postgres.yaml` | DuckDB + Postgres data plane connection |
+| `connections/data_plane_fabric.yaml` | Microsoft Fabric data plane connection |
 | `connections/data_plane_motherduck.yaml` | MotherDuck data plane connection |
 | `connections/data_plane_snowflake.yaml` | Snowflake data plane connection |
 | `connections/read_local_files.yaml` | Local CSV source connection |
@@ -433,6 +435,7 @@ Scoring is intentionally two-dimensional and independently computed so that each
 | `profiles/databricks_template.yaml` | Databricks profile template |
 | `profiles/duckdb_template.yaml` | DuckDB profile template |
 | `profiles/duckdb_postgres_template.yaml` | DuckDB + Postgres profile template |
+| `profiles/fabric_template.yaml` | Microsoft Fabric profile template |
 | `profiles/motherduck_template.yaml` | MotherDuck profile template |
 | `profiles/snowflake_template.yaml` | Snowflake profile template |
 | `data/transactions.csv` | Transaction input data |

@@ -14,6 +14,7 @@ Each platform has a dedicated data plane connection. Set the active platform by 
 | 🟧 | `#connection:data_plane_databricks` | Databricks Unity Catalog | `profiles/databricks_template.yaml` |
 | 🟨 | `#connection:data_plane_duckdb` | DuckDB | `profiles/duckdb_template.yaml` |
 | 🟩 | `#connection:data_plane_duckdb_postgres` | DuckDB with Postgres metadata | `profiles/duckdb_postgres_template.yaml` |
+| 🟫 | `#connection:data_plane_fabric` | Microsoft Fabric Lakehouse | `profiles/fabric_template.yaml` |
 | 🟪 | `#connection:data_plane_motherduck` | MotherDuck cloud | `profiles/motherduck_template.yaml` |
 | 🩵 | `#connection:data_plane_snowflake` | Snowflake | `profiles/snowflake_template.yaml` |
 
@@ -39,6 +40,7 @@ profiles/
  ├── databricks_template.yaml      → Databricks Unity Catalog
  ├── duckdb_template.yaml          → DuckDB
  ├── duckdb_postgres_template.yaml → DuckDB with Postgres metadata
+ ├── fabric_template.yaml          → Microsoft Fabric Lakehouse
  ├── motherduck_template.yaml      → MotherDuck cloud
  ├── snowflake_template.yaml       → Snowflake
  ├── workspace_template.yaml       → generic workspace template
