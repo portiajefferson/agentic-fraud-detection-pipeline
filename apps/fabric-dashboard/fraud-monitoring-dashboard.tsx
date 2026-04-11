@@ -1,222 +1,270 @@
-import React from "react";
 
-interface FraudRecord {
-  user_id: string;
-  transaction_id: string;
-  message_id: string;
-  amount: number;
-  message_text: string;
-  transaction_risk_flag: "LOW" | "MEDIUM" | "HIGH";
-  message_risk_flag: "LOW" | "MEDIUM" | "HIGH";
-  overall_risk_score: "LOW" | "MEDIUM" | "HIGH";
-  requires_immediate_review: boolean;
-  risk_reason: string;
-}
+Developer Plan Trial
+🔌 Connect your
+BigQuery
+,
+Databricks
+, or
+Snowflake
+Data Plane
+Select plan
 
-interface DashboardProps {
-  data: FraudRecord[];
-}
+Search
+Ctrl+K
 
-const RISK_COLORS: Record<string, string> = {
-  LOW: "#22c55e",
-  MEDIUM: "#f59e0b",
-  HIGH: "#ef4444",
+
+
+9+
+
+portia.m.jefferson@gmail.com's Instance
+User avatar
+Conversations
+Applications
+Filter...
+Fraud Monitoring Dashboard
+Portia
+·
+1 day ago
+·
+Saved
+
+
+
+
+Fraud Monitoring Dashboard
+Preview
+Code
+Open in Portia
+
+
+JSX
+227 lines
+
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  LineChart,
+  Line,
+  Cell,
+} from 'recharts';
+import { AlertTriangle, BarChart3, LineChart as LineChartIcon, RefreshCw, Shield, Users } from 'lucide-react';
+
+const CONNECTION = 'data_plane_fabric';
+const RISK_COLORS = {
+  HIGH: '#ef4444',
+  MEDIUM: '#f59e0b',
+  LOW: '#22c55e',
 };
 
-function RiskBadge({ level }: { level: string }) {
-  return (
-    <span
-      style={{
-        backgroundColor: RISK_COLORS[level] ?? "#6b7280",
-        color: "#fff",
-        borderRadius: "4px",
-        padding: "2px 8px",
-        fontSize: "0.75rem",
-        fontWeight: 600,
-      }}
-    >
-      {level}
-    </span>
-  );
-}
+const formatNumber = (value) => new Intl.NumberFormat('en-US').format(value);
+const formatCurrency = (value) =>
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(value);
 
-function RiskDistribution({ data }: { data: FraudRecord[] }) {
-  const counts = { LOW: 0, MEDIUM: 0, HIGH: 0 };
-  for (const r of data) counts[r.overall_risk_score]++;
-  const total = data.length || 1;
+const normalizeDistribution = (rows) =>
+  rows.map((row) => ({
+    overall_risk_score: row.overall_risk_score,
+    record_count: Number(row.record_count || 0),
+  }));
+
+const normalizeHighRiskUsers = (rows) =>
+  rows.map((row) => ({
+    user_id: row.user_id,
+    high_risk_records: Number(row.high_risk_records || 0),
+    total_high_risk_amount: Number(row.total_high_risk_amount || 0),
+  }));
+
+const normalizeTrend = (rows) =>
+  rows.map((row) => ({
+    transaction_id: String(row.transaction_id),
+    amount: Number(row.amount || 0),
+    overall_risk_score: row.overall_risk_score,
+  }));
+
+export default function App() {
+  const [distribution, setDistribution] = useState([]);
+  const [highRiskUsers, setHighRiskUsers] = useState([]);
+  const [trend, setTrend] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const distributionResult = await window.ascend.runQuery(
+        `SELECT
+            overall_risk_score,
+            COUNT(*) AS record_count
+         FROM {{ ref('fraud_risk_dataset', flow='fraud_detection') }}
+         GROUP BY overall_risk_score
+         ORDER BY CASE overall_risk_score WHEN 'HIGH' THEN 1 WHEN 'MEDIUM' THEN 2 ELSE 3 END`,
+        { connection: CONNECTION }
+      );
+
+      const highRiskUsersResult = await window.ascend.runQuery(
+        `SELECT
+            user_id,
+            COUNT(*) AS high_risk_records,
+            SUM(CAST(amount AS FLOAT)) AS total_high_risk_amount
+         FROM {{ ref('fraud_risk_dataset', flow='fraud_detection') }}
+         WHERE overall_risk_score = 'HIGH'
+         GROUP BY user_id
+         ORDER BY high_risk_records DESC, total_high_risk_amount DESC, user_id`,
+        { connection: CONNECTION }
+      );
+
+      const trendResult = await window.ascend.runQuery(
+        `SELECT
+            CAST(transaction_id AS NVARCHAR(MAX)) AS transaction_id,
+            CAST(amount AS FLOAT) AS amount,
+            overall_risk_score
+         FROM {{ ref('fraud_risk_dataset', flow='fraud_detection') }}
+         ORDER BY transaction_id`,
+        { connection: CONNECTION }
+      );
+
+      setDistribution(normalizeDistribution(distributionResult.rows || []));
+      setHighRiskUsers(normalizeHighRiskUsers(highRiskUsersResult.rows || []));
+      setTrend(normalizeTrend(trendResult.rows || []));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load fraud dashboard data.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const summary = useMemo(() => {
+    const totalRecords = distribution.reduce((sum, row) => sum + row.record_count, 0);
+    const highRiskCount = distribution.find((row) => row.overall_risk_score === 'HIGH')?.record_count || 0;
+    const totalHighRiskAmount = highRiskUsers.reduce((sum, row) => sum + row.total_high_risk_amount, 0);
+    return { totalRecords, highRiskCount, totalHighRiskAmount };
+  }, [distribution, highRiskUsers]);
 
   return (
-    <div style={{ marginBottom: "1.5rem" }}>
-      <h2 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: "0.5rem" }}>
-        Risk Distribution
-      </h2>
-      {(["HIGH", "MEDIUM", "LOW"] as const).map((level) => (
-        <div key={level} style={{ marginBottom: "0.4rem" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "2px" }}>
-            <RiskBadge level={level} />
-            <span style={{ fontSize: "0.85rem" }}>
-              {counts[level]} ({((counts[level] / total) * 100).toFixed(1)}%)
-            </span>
+    <div className="min-h-screen bg-slate-950 text-slate-100 p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+        <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-3xl font-semibold flex items-center gap-3">
+              <Shield className="w-8 h-8 text-red-400" />
+              Fraud Monitoring Dashboard
+            </h1>
+            <p className="text-slate-400 mt-2">
+              Simple monitoring view for fraud scoring volume, high-risk users, and transaction amount patterns.
+            </p>
           </div>
-          <div style={{ background: "#e5e7eb", borderRadius: "4px", height: "8px" }}>
-            <div
-              style={{
-                width: `${(counts[level] / total) * 100}%`,
-                background: RISK_COLORS[level],
-                borderRadius: "4px",
-                height: "100%",
-              }}
-            />
+          <button
+            onClick={loadData}
+            disabled={loading}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-sky-500 text-white font-medium hover:bg-sky-400 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            {loading ? 'Loading…' : 'Refresh'}
+          </button>
+        </header>
+
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/30 text-red-200 rounded-xl p-4 flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 mt-0.5" />
+            <div>{error}</div>
           </div>
-        </div>
-      ))}
-    </div>
-  );
-}
+        )}
 
-function HighRiskUserCount({ data }: { data: FraudRecord[] }) {
-  const highRiskUsers = new Set(
-    data.filter((r) => r.requires_immediate_review).map((r) => r.user_id)
-  );
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+            <div className="text-sm text-slate-400">Total records</div>
+            <div className="text-3xl font-semibold mt-2">{formatNumber(summary.totalRecords)}</div>
+          </div>
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+            <div className="text-sm text-slate-400">High-risk records</div>
+            <div className="text-3xl font-semibold mt-2 text-red-400">{formatNumber(summary.highRiskCount)}</div>
+          </div>
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 md:col-span-2">
+            <div className="text-sm text-slate-400">Total high-risk transaction amount</div>
+            <div className="text-3xl font-semibold mt-2 text-amber-300">{formatCurrency(summary.totalHighRiskAmount)}</div>
+          </div>
+        </section>
 
-  return (
-    <div
-      style={{
-        background: "#fef2f2",
-        border: "1px solid #fca5a5",
-        borderRadius: "8px",
-        padding: "1rem",
-        marginBottom: "1.5rem",
-        display: "flex",
-        alignItems: "center",
-        gap: "1rem",
-      }}
-    >
-      <span style={{ fontSize: "2rem" }}>⚠️</span>
-      <div>
-        <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#dc2626" }}>
-          {highRiskUsers.size}
-        </div>
-        <div style={{ fontSize: "0.85rem", color: "#6b7280" }}>
-          High-Risk Users Requiring Immediate Review
-        </div>
+        <section className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <BarChart3 className="w-5 h-5 text-sky-400" />
+              <h2 className="text-lg font-semibold">Overall Risk Distribution</h2>
+            </div>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={distribution}>
+                  <CartesianGrid stroke="#334155" strokeDasharray="3 3" />
+                  <XAxis dataKey="overall_risk_score" stroke="#94a3b8" fontSize={12} />
+                  <YAxis stroke="#94a3b8" fontSize={12} allowDecimals={false} />
+                  <Tooltip />
+                  <Bar dataKey="record_count" radius={[8, 8, 0, 0]}>
+                    {distribution.map((entry) => (
+                      <Cell key={entry.overall_risk_score} fill={RISK_COLORS[entry.overall_risk_score] || '#0ea5e9'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Users className="w-5 h-5 text-amber-400" />
+              <h2 className="text-lg font-semibold">High-Risk Transactions by User</h2>
+            </div>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={highRiskUsers} layout="vertical" margin={{ left: 20 }}>
+                  <CartesianGrid stroke="#334155" strokeDasharray="3 3" />
+                  <XAxis type="number" stroke="#94a3b8" fontSize={12} allowDecimals={false} />
+                  <YAxis dataKey="user_id" type="category" stroke="#94a3b8" fontSize={12} width={60} />
+                  <Tooltip formatter={(value) => formatNumber(Number(value || 0))} />
+                  <Legend />
+                  <Bar dataKey="high_risk_records" name="High-risk records" fill="#f97316" radius={[0, 8, 8, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <LineChartIcon className="w-5 h-5 text-emerald-400" />
+            <h2 className="text-lg font-semibold">Transaction Amount Trend by Risk Level</h2>
+          </div>
+          <div className="h-96">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={trend}>
+                <CartesianGrid stroke="#334155" strokeDasharray="3 3" />
+                <XAxis dataKey="transaction_id" stroke="#94a3b8" fontSize={12} />
+                <YAxis stroke="#94a3b8" fontSize={12} />
+                <Tooltip formatter={(value) => formatCurrency(Number(value || 0))} />
+                <Legend />
+                <Line type="monotone" dataKey="amount" name="Transaction amount" stroke="#38bdf8" strokeWidth={3} dot={{ r: 4 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-400">
+            <span className="inline-flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-red-500" /> HIGH</span>
+            <span className="inline-flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-amber-500" /> MEDIUM</span>
+            <span className="inline-flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-green-500" /> LOW</span>
+            <span>Use hover to inspect each transaction amount.</span>
+          </div>
+        </section>
       </div>
     </div>
   );
 }
-
-function TransactionTrends({ data }: { data: FraudRecord[] }) {
-  const sorted = [...data].sort((a, b) =>
-    a.transaction_id.localeCompare(b.transaction_id)
-  );
-  const maxAmount = Math.max(...sorted.map((r) => r.amount), 1);
-  const chartHeight = 80;
-  const barWidth = Math.max(8, Math.floor(320 / (sorted.length || 1)));
-
-  return (
-    <div style={{ marginBottom: "1.5rem" }}>
-      <h2 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: "0.5rem" }}>
-        Transaction Trends
-      </h2>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-end",
-          gap: "3px",
-          height: `${chartHeight}px`,
-          overflowX: "auto",
-          paddingBottom: "4px",
-        }}
-      >
-        {sorted.map((r) => (
-          <div
-            key={r.transaction_id}
-            title={`${r.transaction_id}: $${r.amount} (${r.overall_risk_score})`}
-            style={{
-              width: `${barWidth}px`,
-              minWidth: `${barWidth}px`,
-              height: `${Math.max(4, (r.amount / maxAmount) * chartHeight)}px`,
-              background: RISK_COLORS[r.overall_risk_score],
-              borderRadius: "2px 2px 0 0",
-              cursor: "pointer",
-            }}
-          />
-        ))}
-      </div>
-      <div style={{ fontSize: "0.75rem", color: "#9ca3af", marginTop: "4px" }}>
-        Each bar represents a transaction, coloured by risk level.
-      </div>
-    </div>
-  );
-}
-
-function RecordsTable({ data }: { data: FraudRecord[] }) {
-  return (
-    <div style={{ overflowX: "auto" }}>
-      <h2 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: "0.5rem" }}>
-        Flagged Records
-      </h2>
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
-        <thead>
-          <tr style={{ background: "#f3f4f6" }}>
-            {["User", "Transaction", "Amount", "Risk Score", "Reason", "Review"].map(
-              (h) => (
-                <th
-                  key={h}
-                  style={{ padding: "6px 10px", textAlign: "left", fontWeight: 600 }}
-                >
-                  {h}
-                </th>
-              )
-            )}
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((r) => (
-            <tr
-              key={`${r.transaction_id}-${r.message_id}`}
-              style={{ borderBottom: "1px solid #e5e7eb" }}
-            >
-              <td style={{ padding: "6px 10px" }}>{r.user_id}</td>
-              <td style={{ padding: "6px 10px" }}>{r.transaction_id}</td>
-              <td style={{ padding: "6px 10px" }}>${r.amount.toFixed(2)}</td>
-              <td style={{ padding: "6px 10px" }}>
-                <RiskBadge level={r.overall_risk_score} />
-              </td>
-              <td style={{ padding: "6px 10px" }}>{r.risk_reason}</td>
-              <td style={{ padding: "6px 10px" }}>
-                {r.requires_immediate_review ? "✅ Yes" : "—"}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-export default function FraudMonitoringDashboard({ data = [] }: DashboardProps) {
-  return (
-    <div
-      style={{
-        fontFamily: "Inter, system-ui, sans-serif",
-        maxWidth: "900px",
-        margin: "0 auto",
-        padding: "2rem",
-        color: "#111827",
-      }}
-    >
-      <h1 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "0.25rem" }}>
-        Fraud Monitoring Dashboard
-      </h1>
-      <p style={{ color: "#6b7280", marginBottom: "2rem", fontSize: "0.9rem" }}>
-        Powered by Ascend · Microsoft Fabric
-      </p>
-
-      <HighRiskUserCount data={data} />
-      <RiskDistribution data={data} />
-      <TransactionTrends data={data} />
-      <RecordsTable data={data} />
-    </div>
-  );
-}
+Ascend.io | portia.m.jefferson@gmail.com's Instance
