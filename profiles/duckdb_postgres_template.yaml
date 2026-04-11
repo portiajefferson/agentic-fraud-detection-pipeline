@@ -1,0 +1,11 @@
+profile:
+  parameters:
+    data_plane:
+      connection_name: data_plane_duckdb_postgres
+    duckdb_postgres:
+      database: agentic_fraud_detection.duckdb
+      postgres:
+        host: YOUR_POSTGRES_HOST
+        port: 5432
+        dbname: YOUR_POSTGRES_DBNAME
+        user: YOUR_POSTGRES_USER

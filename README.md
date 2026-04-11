@@ -1,9 +1,9 @@
 # 🛡️ Agentic Fraud Detection Pipeline
 
-> Combining transaction and behavioral signals to identify financial exploitation and automate risk monitoring on Microsoft Fabric.
+> Combining transaction and behavioral signals to identify financial exploitation and automate risk monitoring across BigQuery, Databricks, Snowflake, MotherDuck, DuckDB, and GCS.
 
 [![Flow](https://img.shields.io/badge/flow-fraud__detection-blue)](#fraud-detection-flow)
-[![Platform](https://img.shields.io/badge/platform-Microsoft%20Fabric-purple)](#runtime-and-platform-model)
+[![Platforms](https://img.shields.io/badge/platforms-BigQuery%20%7C%20Databricks%20%7C%20Snowflake%20%7C%20MotherDuck%20%7C%20DuckDB-purple)](#connections)
 [![Status](https://img.shields.io/badge/status-active-brightgreen)](#operational-checklist)
 
 ---
@@ -27,18 +27,19 @@
 
 ## 🔍 What this project does
 
-This project is organized around a single data plane and a local file source connection:
+This project is organized around a configurable data plane (BigQuery, Databricks, Snowflake, MotherDuck, or DuckDB), two source connections, and a single fraud detection flow:
 
-- `#connection:read_local_files` supplies CSV inputs for the fraud detection flow
+- `#connection:read_local_files` supplies local CSV inputs for development and demos
+- `#connection:read_gcs_lake` supplies GCS parquet inputs for cloud-based ingestion
 - `#flow:fraud_detection` drives end-to-end fraud scoring and monitoring
 - `#automation:fraud_detection` schedules the flow to run hourly
 
 At a high level:
 
-1. Source data is read from local CSV files.
+1. Source data is read from local CSV files or GCS.
 2. Transforms evaluate message and transaction risk signals.
 3. Both signals are joined and scored per user.
-4. Curated fraud risk outputs are materialized for dashboards and alerts.
+4. Curated fraud risk outputs are materialized in the active data plane.
 5. An automation orchestrates scheduled flow execution.
 
 ---
@@ -47,14 +48,15 @@ At a high level:
 
 ```mermaid
 flowchart TD
-    A["📄 Local CSV data\ndata/transactions.csv\ndata/messages.csv"] --> B["⚙️ #flow:fraud_detection"]
+    A["📄 Local CSV\ndata/transactions.csv\ndata/messages.csv"] --> B["⚙️ #flow:fraud_detection"]
+    G["☁️ GCS\ngs://ascend-ottos-expeditions/"] --> B
 
     B --> C["📊 #component:fraud_risk_dataset"]
     B --> D["📈 #component:fraud_monitoring_summary"]
 
     C --> E["🔔 #automation:fraud_detection"]
 
-    subgraph "Data Plane"
+    subgraph "Data Plane (BigQuery | Databricks | Snowflake | MotherDuck | DuckDB)"
       C
       D
     end
@@ -77,23 +79,61 @@ flowchart TD
 
 ## ⚙️ Runtime and platform model
 
-The project uses local file ingestion and a configurable data plane set in each profile.
+The project defaults all flows to a configurable data plane set by the active profile. The data plane connection name is resolved at runtime from `$parameters.data_plane.connection_name`.
 
 ```yaml
 # ascend_project.yaml
 project:
   name: agentic-fraud-detection-pipeline
+  parameters:
+    data_plane: {}
+  defaults:
+    - kind: Flow
+      name:
+        regex: .*
+      spec:
+        data_plane:
+          connection_name: $parameters.data_plane.connection_name
 ```
 
-Profiles in `profiles/` define environment-specific parameters (workspace vs. deployment). This keeps credentials and environment settings out of source control while allowing the same pipeline to run in multiple contexts.
+**Implications:**
+- New flows inherit the active data plane automatically.
+- Switching platforms requires only activating a different profile — no flow changes needed.
+- Each platform profile sets `data_plane.connection_name` to the matching connection file.
+- SQL components should use the dialect appropriate for the selected platform.
 
 ---
 
 ## 🔌 Connections
 
-### Source connection
+### 🟦 Data plane connections
 
-`#connection:read_local_files` reads CSV files from the `data/` directory.
+Each platform has a dedicated parameterized connection. Select the matching profile to activate it.
+
+| Badge | Connection | Platform |
+|-------|-----------|----------|
+| 🟦 | `#connection:data_plane_bigquery` | Google BigQuery |
+| 🟧 | `#connection:data_plane_databricks` | Databricks Unity Catalog |
+| 🟨 | `#connection:data_plane_duckdb` | DuckDB |
+| 🟩 | `#connection:data_plane_duckdb_postgres` | DuckDB with Postgres metadata |
+| 🟪 | `#connection:data_plane_motherduck` | MotherDuck cloud |
+| 🩵 | `#connection:data_plane_snowflake` | Snowflake |
+
+Each connection resolves its host, catalog/dataset, and auth from the active profile via the `$<: $parameters.<platform>` pattern:
+
+```yaml
+# connections/data_plane_bigquery.yaml
+connection:
+  bigquery:
+    $<: $parameters.bigquery
+```
+
+### 🟩 Source connections
+
+| Badge | Connection | Description |
+|-------|-----------|-------------|
+| 🟨 | `#connection:read_local_files` | Local CSV files in `data/` — used for development and demos |
+| 🟩 | `#connection:read_gcs_lake` | GCS bucket at `gs://ascend-ottos-expeditions/` — used for cloud ingestion |
 
 ```yaml
 # connections/read_local_files.yaml
@@ -103,8 +143,17 @@ connection:
   parameters: {}
 ```
 
+```yaml
+# connections/read_gcs_lake.yaml
+connection:
+  gcs:
+    root: gs://ascend-ottos-expeditions/
+```
+
 > [!TIP]
-> Swap this for a cloud storage connection (GCS, S3, ADLS) to ingest from a data lake without changing any transform logic.
+> To switch from local CSV to GCS, update the `connection:` field in any read component YAML from `read_local_files` to `read_gcs_lake`. No transform logic changes are needed.
+
+See [`connections/README.md`](connections/README.md) for the full connection reference and profile mapping.
 
 ---
 
@@ -291,6 +340,13 @@ flowchart TD
 
 ## 🔧 How to extend the project
 
+### Switch the data plane platform
+
+1. Copy the appropriate profile template from `profiles/` (e.g., `profiles/snowflake_template.yaml`).
+2. Fill in your platform-specific credentials (account, warehouse, schema, etc.).
+3. Activate the profile in your workspace.
+4. All flows automatically inherit the new data plane — no flow-level changes required.
+
 ### Add a new fraud signal
 
 1. Add a new field to `data/transactions.csv` or `data/messages.csv`, or introduce a new read component.
@@ -339,8 +395,9 @@ Scoring is intentionally two-dimensional and independently computed so that each
 
 ## ✅ Operational checklist
 
-- [ ] Profile parameters configured in the active workspace
-- [ ] `#connection:read_local_files` valid and pointing to `data/`
+- [ ] Active profile selected and platform parameters configured
+- [ ] Data plane connection valid (`#connection:data_plane_<platform>`)
+- [ ] `#connection:read_local_files` valid and pointing to `data/` (or `#connection:read_gcs_lake` for cloud ingestion)
 - [ ] Project build in `ready` state
 - [ ] `#flow:fraud_detection` run completed successfully
 - [ ] `#component:fraud_risk_dataset` contains expected rows
@@ -360,10 +417,23 @@ Scoring is intentionally two-dimensional and independently computed so that each
 | File | Why it matters |
 |------|----------------|
 | `README.md` | Primary project guide (this file) |
-| `ascend_project.yaml` | Project name and global defaults |
+| `ascend_project.yaml` | Project name, data plane default, and global settings |
 | `flows/fraud_detection/components/fraud_risk_dataset.py` | Main fraud scoring business logic |
 | `flows/fraud_detection/fraud_detection.yaml` | Flow definition and metadata |
 | `automations/fraud_detection.yaml` | Hourly scheduling automation |
+| `connections/data_plane_bigquery.yaml` | BigQuery data plane connection |
+| `connections/data_plane_databricks.yaml` | Databricks data plane connection |
+| `connections/data_plane_duckdb.yaml` | DuckDB data plane connection |
+| `connections/data_plane_duckdb_postgres.yaml` | DuckDB + Postgres data plane connection |
+| `connections/data_plane_motherduck.yaml` | MotherDuck data plane connection |
+| `connections/data_plane_snowflake.yaml` | Snowflake data plane connection |
 | `connections/read_local_files.yaml` | Local CSV source connection |
+| `connections/read_gcs_lake.yaml` | GCS source connection |
+| `profiles/bigquery_template.yaml` | BigQuery profile template |
+| `profiles/databricks_template.yaml` | Databricks profile template |
+| `profiles/duckdb_template.yaml` | DuckDB profile template |
+| `profiles/duckdb_postgres_template.yaml` | DuckDB + Postgres profile template |
+| `profiles/motherduck_template.yaml` | MotherDuck profile template |
+| `profiles/snowflake_template.yaml` | Snowflake profile template |
 | `data/transactions.csv` | Transaction input data |
 | `data/messages.csv` | Message input data |

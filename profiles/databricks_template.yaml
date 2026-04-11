@@ -1,0 +1,9 @@
+profile:
+  parameters:
+    data_plane:
+      connection_name: data_plane_databricks
+    databricks:
+      host: YOUR_DATABRICKS_HOST
+      http_path: YOUR_HTTP_PATH
+      catalog: agentic_fraud_detection
+      schema: default

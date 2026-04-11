@@ -1,0 +1,6 @@
+profile:
+  parameters:
+    data_plane:
+      connection_name: data_plane_motherduck
+    motherduck:
+      database: agentic_fraud_detection
