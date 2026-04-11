@@ -15,6 +15,8 @@ from ascend.resources import ref, test, transform
         test("not_null", column="transaction_id"),
         test("not_null", column="message_id"),
         test("not_null", column="overall_risk_score"),
+        test("not_null", column="requires_immediate_review"),
+        test("not_null", column="risk_reason"),
         test("count_greater_than", count=0),
     ],
 )
@@ -55,6 +57,11 @@ def fraud_risk_dataset(
     )
     joined.loc[one_high_or_both_medium, "overall_risk_score"] = "MEDIUM"
     joined.loc[both_high, "overall_risk_score"] = "HIGH"
+    joined["requires_immediate_review"] = joined["overall_risk_score"] == "HIGH"
+    joined["risk_reason"] = "Normal activity"
+    joined.loc[joined["message_risk_flag"] == "HIGH", "risk_reason"] = "Suspicious or urgent language detected"
+    joined.loc[joined["transaction_risk_flag"] == "HIGH", "risk_reason"] = "High-value transaction with new recipient"
+    joined.loc[both_high, "risk_reason"] = "High-risk transaction + suspicious messaging"
 
     return joined[
         [
@@ -66,5 +73,7 @@ def fraud_risk_dataset(
             "transaction_risk_flag",
             "message_risk_flag",
             "overall_risk_score",
+            "requires_immediate_review",
+            "risk_reason",
         ]
     ]

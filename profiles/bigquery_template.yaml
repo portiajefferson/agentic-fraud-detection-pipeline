@@ -1,0 +1,8 @@
+profile:
+  parameters:
+    data_plane:
+      connection_name: data_plane_bigquery
+    bigquery:
+      project: YOUR_GCP_PROJECT
+      dataset: agentic_fraud_detection
+      location: US

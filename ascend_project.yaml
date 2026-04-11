@@ -1,2 +1,11 @@
 project:
   name: agentic-fraud-detection-pipeline
+  parameters:
+    data_plane: {}
+  defaults:
+    - kind: Flow
+      name:
+        regex: .*
+      spec:
+        data_plane:
+          connection_name: $parameters.data_plane.connection_name

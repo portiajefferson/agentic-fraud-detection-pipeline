@@ -1,0 +1,10 @@
+profile:
+  parameters:
+    data_plane:
+      connection_name: data_plane_snowflake
+    snowflake:
+      account: YOUR_SNOWFLAKE_ACCOUNT
+      warehouse: YOUR_WAREHOUSE
+      database: AGENTIC_FRAUD_DETECTION
+      schema: PUBLIC
+      role: YOUR_ROLE

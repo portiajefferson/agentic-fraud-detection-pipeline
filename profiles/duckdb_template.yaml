@@ -1,0 +1,6 @@
+profile:
+  parameters:
+    data_plane:
+      connection_name: data_plane_duckdb
+    duckdb:
+      database: agentic_fraud_detection.duckdb
