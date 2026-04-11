@@ -1,5 +1,7 @@
 # 🛡️ Agentic Fraud Detection Pipeline
 
+> Designed as a scalable, agentic fraud detection system for regulated environments, combining behavioral and transactional data to automate risk scoring and response workflows.
+
 > Combining transaction and behavioral signals to identify financial exploitation and automate risk monitoring across BigQuery, Databricks, Snowflake, MotherDuck, DuckDB, and GCS.
 
 [![Flow](https://img.shields.io/badge/flow-fraud__detection-blue)](#fraud-detection-flow)
@@ -10,7 +12,8 @@
 
 ## 📋 Table of Contents
 
-- [What this project does](#what-this-project-does)
+- [Executive Summary](#executive-summary)
+- [System Overview](#system-overview)
 - [Architecture overview](#architecture-overview)
 - [Repository layout](#repository-layout)
 - [Runtime and platform model](#runtime-and-platform-model)
@@ -25,7 +28,25 @@
 
 ---
 
-## 🔍 What this project does
+## 🧠 Executive Summary
+
+This project demonstrates how to design and deploy an **agentic data pipeline** for fraud detection using Ascend.
+
+The system ingests transactional and behavioral data, applies risk scoring logic, and triggers automated workflows to identify and respond to high-risk activity.
+
+Unlike traditional batch-based fraud systems, this pipeline is designed for **continuous monitoring, automation, and explainable decision-making**, making it suitable for fintech and regulated environments.
+
+Key capabilities include:
+
+- End-to-end pipeline orchestration
+- Automated fraud detection workflows
+- Risk scoring with explainability
+- Multi-platform data plane support (BigQuery, Snowflake, Databricks, Fabric, etc.)
+- Real-time monitoring via dashboard integration
+
+---
+
+## 🔍 System Overview
 
 This project is organized around a configurable data plane (BigQuery, Databricks, Snowflake, MotherDuck, or DuckDB), two source connections, and a single fraud detection flow:
 
